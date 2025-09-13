@@ -1,0 +1,8 @@
+google-cloud-aiplatform==1.52.0
+google-cloud-documentai==2.20.0
+google-cloud-secretmanager==2.16.0
+pypdf2==3.0.1
+pyyaml==6.0
+pytest==7.4.0
+flask==2.3.2
+google-cloud-storage==2.10.0

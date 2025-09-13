@@ -1,0 +1,14 @@
+{
+  "name": "legal-rag-functions",
+  "description": "Firebase Functions for Legal RAG AI System",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "firebase-functions": "^4.4.0",
+    "firebase-admin": "^11.8.0",
+    "axios": "^1.4.0"
+  },
+  "engines": {
+    "node": "18"
+  }
+}
