@@ -1,45 +1,98 @@
 """
-Main AI service orchestrator
+Flask API service for the Legal RAG system
 """
 
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
+from flask import Flask, request, jsonify
 from document_processor import LegalDocumentProcessor
-from typing import Dict
+from embeddings import EmbeddingsGenerator
+from vector_search import VectorSearch
+from gemini_processor import GeminiProcessor
+import logging
+import os
 
-class LegalAIService:
-    """Main service for legal document AI processing"""
-    
-    def __init__(self, project_id: str = "legal-rag-project"):
-        self.project_id = project_id
-        self.document_processor = LegalDocumentProcessor(project_id)
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Initialize Flask app
+app = Flask(__name__)
+
+# Initialize components
+document_processor = LegalDocumentProcessor()
+embeddings_generator = EmbeddingsGenerator()
+vector_search = VectorSearch()
+gemini_processor = GeminiProcessor()
+
+@app.route("/process_document", methods=["POST"])
+def process_document():
+    """Process a new document: extract text, generate embeddings, store in vector search"""
+    try:
+        data = request.json
+        document_path = data.get("document_path")
+        user_id = data.get("user_id")
         
-    def process_document(self, file_path: str) -> Dict:
-        """Process a legal document"""
-        print(f"Processing document: {file_path}")
+        if not document_path:
+            return jsonify({"error": "No document path provided"}), 400
+            
+        # Extract and chunk text
+        extraction_result = document_processor.extract_text(document_path)
+        chunks = document_processor.chunk_text(extraction_result["text"])
         
-        try:
-            extraction_result = self.document_processor.extract_text(file_path)
-            chunks = self.document_processor.chunk_text(extraction_result["text"])
+        # Generate embeddings
+        embeddings = embeddings_generator.generate_embeddings(
+            [chunk["content"] for chunk in chunks]
+        )
+        
+        # Store in vector search with metadata
+        metadata = {
+            "user_id": user_id,
+            "document_path": document_path,
+            "language": "en",
+            "jurisdiction": "US"
+        }
+        vector_search.store_embeddings(embeddings, chunks, metadata)
+        
+        return jsonify({
+            "status": "success",
+            "chunks": len(chunks),
+            "disclaimer": "This system provides educational guidance only, not legal advice."
+        })
+        
+    except Exception as e:
+        logger.error(f"Error processing document: {e}")
+        return jsonify({
+            "error": str(e),
+            "disclaimer": "This system provides educational guidance only, not legal advice."
+        }), 500
+
+@app.route("/query", methods=["POST"])
+def query():
+    """Query documents using RAG with Gemini"""
+    try:
+        data = request.json
+        query = data.get("query")
+        
+        if not query:
+            return jsonify({"error": "No query provided"}), 400
             
-            return {
-                "status": "success",
-                "document_info": extraction_result["metadata"],
-                "total_chunks": len(chunks),
-                "message": "Document processed successfully"
-            }
-            
-        except Exception as e:
-            return {
-                "status": "error", 
-                "message": f"Error: {str(e)}"
-            }
+        # Generate query embedding
+        query_embedding = embeddings_generator.generate_embeddings([query])[0]
+        
+        # Retrieve relevant chunks
+        chunks = vector_search.retrieve_chunks(query_embedding)
+        
+        # Generate summary with Gemini
+        response = gemini_processor.generate_summary(chunks, query)
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        logger.error(f"Error processing query: {e}")
+        return jsonify({
+            "error": str(e),
+            "disclaimer": "This system provides educational guidance only, not legal advice."
+        }), 500
 
 if __name__ == "__main__":
-    service = LegalAIService()
-    print("AI service ready!")
-    
-    result = service.process_document("sample_lease.pdf")
-    print(f"Service test: {result['status']}")
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
