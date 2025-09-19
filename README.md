@@ -1,6 +1,6 @@
 ## Legal RAG Translation System (MVP)
 
---
+
 ## Project Overview
 This project develops a Retrieval-Augmented Generation (RAG) system to provide
 plain-language explanations and educational guidance for rental agreements and consumer
@@ -13,14 +13,14 @@ client-side using AES-256 before upload and decrypted server-side only during
 processing to ensure confidentiality, with the encryption key stored securely in
 environment variables.
 
---
+
 ## Regulatory Disclaimer
 This system does not provide legal advice. It offers plain-language explanations and
 educational guidance to help users understand rental agreements and consumer loan contracts.
 Always consult a qualified advocate registered with the Bar Council of India for legal advice.
 
 
---
+
 ## Key Features (MVP)
 ●​ Document Processing: Extracts and chunks text from rental agreements and consumer
 loan contracts using pdfplumber, PyPDF2, and pytesseract for OCR.
